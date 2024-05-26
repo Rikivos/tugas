@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
-    <title>Home | SWEETER</title>
+    <title>{{ user_info.name }} | SWEETER</title>
     <meta charset="utf-8" />
     <meta
       name="viewport"
@@ -24,22 +24,18 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-cookie/1.4.1/jquery.cookie.js"></script>
 
     <script>
-      // Untuk logout, anda hanya tinggal
-      // menghapus token anda dari cookies browser anda
-
-      function logout(){
-        $.removeCookie('mytoken');
-        alert('You have been logged out!')
-        window.location.href='/login'
+      function sign_out() {
+        $.removeCookie("mytoken", { path: "/" });
+        alert("Logged out!");
+        window.location.href = "/login";
       }
     </script>
   </head>
   <body>
-    <p>
-      <h1 class="title">This page can only be viewed for 5 seconds after logging in</h1>
-      <h1 class="subtitle">Please try refreshing the page</h1>
-    </p>
-    <h5 class="subtitle">My nickname: {{nickname}}</h5>
-    <button class="button is-danger" onclick="logout()">Logout</button>
+    {% if status %}
+    My Profile Page
+    {% else %} 
+    Some other user's profile page
+    {% endif %}
   </body>
 </html>
