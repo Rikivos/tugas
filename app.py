@@ -80,6 +80,7 @@ def sign_in():
                 "token": token,
             }
         )
+        
     # Let's also handle the case where the id and
     # password combination cannot be found
     else:
@@ -89,6 +90,10 @@ def sign_in():
                 "msg": "We could not find a user with that id/password combination",
             }
         )
+        return redirect("/about")
+
+        # Jika login gagal, kembalikan ke halaman login dengan pesan kesalahan
+        return redirect(url_for("login", msg="Login gagal"))
 
 
 @app.route("/sign_up/save", methods=["POST"])
