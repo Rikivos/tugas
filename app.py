@@ -22,14 +22,13 @@ db = client.dbsparta_plus_week4
 def home():
     token_receive = request.cookies.get("mytoken")
     try:
-        payload = jwt.decode(token_receive, SECRET_KEY, algorithms=["HS256"])
-
-        return render_template("index.html")
+        payload = jwt.decode(token_receive, SECRET_KEY, algorithms=['HS256'])
+        user_info = db.users.find_one({"username": payload["id"]})
+        return render_template('index.html', user_info=user_info)
     except jwt.ExpiredSignatureError:
         return redirect(url_for("login", msg="Your token has expired"))
     except jwt.exceptions.DecodeError:
-        return redirect(url_for("login", msg="There was problem logging you in"))
-
+        return redirect(url_for("login", msg="There was a problem logging you in"))
 
 @app.route("/login")
 def login():
@@ -91,11 +90,9 @@ def sign_in():
             }
         )
         return redirect("/about")
-
+...
         # Jika login gagal, kembalikan ke halaman login dengan pesan kesalahan
-        return redirect(url_for("login", msg="Login gagal"))
-
-
+        
 @app.route("/sign_up/save", methods=["POST"])
 def sign_up():
     username_receive = request.form['username_give']
@@ -129,37 +126,76 @@ def save_img():
         return jsonify({"result": "success", "msg": "Your profile has been updated"})
     except (jwt.ExpiredSignatureError, jwt.exceptions.DecodeError):
         return redirect(url_for("home"))
-
-
 @app.route("/posting", methods=["POST"])
 def posting():
     token_receive = request.cookies.get("mytoken")
     try:
         payload = jwt.decode(token_receive, SECRET_KEY, algorithms=["HS256"])
-        # Kita buat  post baru disini
+        user_info = db.users.find_one({"username": payload["id"]})
+        comment_receive = request.form["comment_give"]
+        date_receive = request.form["date_give"]
+        doc = {
+            "username": user_info["username"],
+            "profile_name": user_info["profile_name"],
+            "profile_pic_real": user_info["profile_pic_real"],
+            "comment": comment_receive,
+            "date": date_receive,
+        }
+        db.posts.insert_one(doc)
         return jsonify({"result": "success", "msg": "Posting successful!"})
     except (jwt.ExpiredSignatureError, jwt.exceptions.DecodeError):
         return redirect(url_for("home"))
-
 
 @app.route("/get_posts", methods=["GET"])
 def get_posts():
     token_receive = request.cookies.get("mytoken")
     try:
         payload = jwt.decode(token_receive, SECRET_KEY, algorithms=["HS256"])
-        # Kita mengambil daftar lengkap post disini
-        return jsonify({"result": "success", "msg": "Successful fetched all posts"})
+        # We should fetch the full list of posts here
+        posts = list(db.posts.find({}).sort("date", -1).limit(20))
+        for post in posts:
+            post["_id"] = str(post["_id"])
+            post["count_heart"] = db.likes.count_documents(
+                {"post_id": post["_id"], "type": "heart"}
+            )
+            post["heart_by_me"] = bool(
+                db.likes.find_one(
+                    {"post_id": post["_id"], "type": "heart", "username": payload["id"]}
+                )
+            )
+        return jsonify(
+            {
+                "result": "success",
+                "msg": "Successful fetched all posts",
+                "posts": posts,
+            }
+        )
     except (jwt.ExpiredSignatureError, jwt.exceptions.DecodeError):
         return redirect(url_for("home"))
-
 
 @app.route("/update_like", methods=["POST"])
 def update_like():
     token_receive = request.cookies.get("mytoken")
     try:
         payload = jwt.decode(token_receive, SECRET_KEY, algorithms=["HS256"])
-        # Kita mengganti hitungan like suatu post disini
-        return jsonify({"result": "success", "msg": "updated"})
+        # We should change the like count for the post here
+        user_info = db.users.find_one({"username": payload["id"]})
+        post_id_receive = request.form["post_id_give"]
+        type_receive = request.form["type_give"]
+        action_receive = request.form["action_give"]
+        doc = {
+            "post_id": post_id_receive,
+            "username": user_info["username"],
+            "type": type_receive,
+        }
+        if action_receive == "like":
+            db.likes.insert_one(doc)
+        else:
+            db.likes.delete_one(doc)
+        count = db.likes.count_documents(
+            {"post_id": post_id_receive, "type": type_receive}
+        )
+        return jsonify({"result": "success", "msg": "updated", "count": count})
     except (jwt.ExpiredSignatureError, jwt.exceptions.DecodeError):
         return redirect(url_for("home"))
 @app.route("/about", methods=["GET"])
@@ -168,7 +204,8 @@ def about():
 @app.route("/secret", methods=["GET"])
 def secret():
     return render_template('secret.html')
+    token_receive = 
 
 
 if __name__ == "__main__":
-    app.run("0.0.0.0", port=5001, debug=True)
+    app.run("0.0.0.0", port=6000, debug=True)
